@@ -1,6 +1,15 @@
 #include <USBComposite.h>
 USBMIDI midi;
 //#include <ResponsiveAnalogRead.h> 
+#include <FastLED.h>
+
+#define LED_PIN     PB10        // Choose a tested pin
+#define NUM_LEDS    1
+#define BRIGHTNESS  100
+#define LED_TYPE    WS2812B
+#define COLOR_ORDER GRB
+
+CRGB leds[NUM_LEDS];
 
 const int NUM_POT = 10;
 const int NUM_BUT = 5;
@@ -23,7 +32,7 @@ unsigned long PTime[NUM_POT] = { 0 };  // Previously stored time
 unsigned long timer[NUM_POT] = { 0 };  // Stores the time that has elapsed since the timer was reset
 
 int potMin = 0;
-int potMax = 4096;
+int potMax = 3402;
 
 bool debug_pot = false;
 byte midiCh = 0;
@@ -32,6 +41,9 @@ byte NUM_BANK = 0;
 
 
 void setup() {
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+  FastLED.setBrightness(BRIGHTNESS);
+
   for (int i = 0; i < NUM_POT; i++) {
     pinMode(analogInputs[i], INPUT);
   }
@@ -49,6 +61,13 @@ void setup() {
 }
 
 void loop() {
+  static uint8_t hue = 0;
+  for(int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CHSV(hue + (i * 10), 255, 255);
+  }
+  FastLED.show();
+  hue++;
+
   for (int i = 0; i < NUM_BUT; i++){
     if (!digitalRead(digitalInput[i])){
       NUM_BANK = i;
