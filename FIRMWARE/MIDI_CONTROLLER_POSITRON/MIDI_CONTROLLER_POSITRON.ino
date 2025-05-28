@@ -4,8 +4,8 @@ USBMIDI midi;
 #include <FastLED.h>
 
 #define LED_PIN     PB10        // Choose a tested pin
-#define NUM_LEDS    1
-#define BRIGHTNESS  100
+#define NUM_LEDS    5
+#define BRIGHTNESS  10
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
 
@@ -61,12 +61,15 @@ void setup() {
 }
 
 void loop() {
-  static uint8_t hue = 0;
+  // Light up LEDs based on active bank
   for(int i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CHSV(hue + (i * 10), 255, 255);
+    if (i == NUM_BANK) {
+      leds[i] = CRGB::White;   // Active bank LED to white
+    } else {
+      leds[i] = CRGB::Black;   // Others off
+    }
   }
   FastLED.show();
-  hue++;
 
   for (int i = 0; i < NUM_BUT; i++){
     if (!digitalRead(digitalInput[i])){
