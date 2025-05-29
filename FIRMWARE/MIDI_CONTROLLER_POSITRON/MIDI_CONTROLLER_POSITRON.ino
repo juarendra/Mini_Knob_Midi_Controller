@@ -32,13 +32,14 @@ unsigned long PTime[NUM_POT] = { 0 };  // Previously stored time
 unsigned long timer[NUM_POT] = { 0 };  // Stores the time that has elapsed since the timer was reset
 
 int potMin = 0;
-int potMax = 3402;
+int potMax = 3070;
 
 bool debug_pot = false;
 byte midiCh = 0;
 byte cc = 1;   
 byte NUM_BANK = 0;
 
+const int NUM_SAMPLES = 10;
 
 void setup() {
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
@@ -88,39 +89,43 @@ void loop() {
   }
 }
 
-void sendMidiValue(){
+void sendMidiValue() {
+  int potMin = 10;    
+  int potMax = 3070;
+
   for (int i = 0; i < NUM_POT; i++) {
-    reading_pot = analogRead(analogInputs[i]);
+    int total = 0;
+
+    // Take multiple samples to average
+    for (int s = 0; s < NUM_SAMPLES; s++) {
+      total += analogRead(analogInputs[i]);
+      delayMicroseconds(100); // Small delay between reads
+    }
+
+    reading_pot = total / NUM_SAMPLES; // Calculate average reading
     potCState[i] = reading_pot;
 
-    midiCState[i] = map(potCState[i], potMin, potMax, 0, 127); 
-    if (midiCState[i] < 0) {
-      midiCState[i] = 0;
-    }
-    if (midiCState[i] > 127) {
-      midiCState[i] = 0;
-    }
+    // Map and constrain stable average value
+    midiCState[i] = map(potCState[i], potMin, potMax, 127, 0);
+    midiCState[i] = constrain(midiCState[i], 0, 127);
+
+    // Dead zones to further stabilize extremes
+    if (midiCState[i] <= 1) midiCState[i] = 0;
+    if (midiCState[i] >= 126) midiCState[i] = 127;
+
     potVar = abs(potCState[i] - potPState[i]);
-    if (potVar > varThreshold) {  // Opens the gate if the potentiometer variation is greater than the threshold
-      PTime[i] = millis();        // Stores the previous time
+    if (potVar > varThreshold) {
+      PTime[i] = millis();
     }
-    timer[i] = millis() - PTime[i];  // Resets the timer 11000 - 11000 = 0ms
+    timer[i] = millis() - PTime[i];
 
-    if (timer[i] < TIMEOUT) {  // If the timer is less than the maximum allowed time it means that the potentiometer is still moving
-      potMoving = true;
-    } else {
-      potMoving = false;
-    }
+    potMoving = timer[i] < TIMEOUT;
 
-    if (potMoving == true) {  // If the potentiometer is still moving, send the change control
-      if (midiPState[i] != midiCState[i]) {
-
-        //use if using with ATmega32U4 (micro, pro micro, leonardo...)
-        midi.sendControlChange(midiCh, cc + i + (NUM_BANK*10), midiCState[i]);  //  (channel, CC number,  CC value)
-
-        potPState[i] = potCState[i];  // Stores the current reading of the potentiometer to compare with the next
-        midiPState[i] = midiCState[i];
-      }
+    // Only send MIDI if there is meaningful change
+    if (abs(midiCState[i] - midiPState[i]) > 1) {
+      midi.sendControlChange(midiCh, cc + i + (NUM_BANK * 10), midiCState[i]);
+      potPState[i] = potCState[i];
+      midiPState[i] = midiCState[i];
     }
   }
 }
