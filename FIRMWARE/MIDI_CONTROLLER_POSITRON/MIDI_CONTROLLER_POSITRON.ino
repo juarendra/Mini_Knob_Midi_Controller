@@ -5,7 +5,7 @@ USBMIDI midi;
 
 #define LED_PIN     PB10        // Choose a tested pin
 #define NUM_LEDS    5
-#define BRIGHTNESS  10
+#define BRIGHTNESS  100
 #define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
 
